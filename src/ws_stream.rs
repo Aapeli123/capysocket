@@ -106,18 +106,22 @@ impl<S: Read + Write> WSStream<S> {
         self.tcp.write_all(&frame_bytes)
     }
 
-    pub fn read_message(&mut self) -> Result<Message, &str> {
+    pub fn read_message(&mut self) -> Result<Option<Message>, &str> {
         
         let frame = self.read_frame();
         if frame.is_err() {
             return Err("Could not read frame");
         }
         let frame = frame.unwrap();
+        if frame.is_none() {
+            return Ok(None);
+        }
+        let frame = frame.unwrap();
         if frame.header.fin {
-            return Ok(Message::from_frame(frame));
+            return Ok(Some(Message::from_frame(frame)));
         }
         if frame.is_control() {
-            return  Ok(Message::from_control(frame));
+            return  Ok(Some(Message::from_control(frame)));
         }
         let mut frames = vec![frame];
         loop {
@@ -126,6 +130,10 @@ impl<S: Read + Write> WSStream<S> {
                 return Err("Could not read frame");
             }
             let frame = f.unwrap();
+            if frame.is_none() {
+                continue;
+            }
+            let frame = frame.unwrap();
             if frame.is_control() {
                 continue;
             }
@@ -136,7 +144,7 @@ impl<S: Read + Write> WSStream<S> {
                 frames.push(frame);
             }
         }
-        Ok(Message::from_frames(frames))
+        Ok(Some(Message::from_frames(frames)))
         
     }
 
@@ -162,10 +170,14 @@ impl<S: Read + Write> WSStream<S> {
         }
     }
 
-    pub fn read_frame(&mut self) -> Result<Frame, &str> {
+    pub fn read_frame(&mut self) -> Result<Option<Frame>, &str> {
         let mut buffer: [u8; 8192] = [0; 8192];
         
-        let n = self.tcp.read(&mut buffer).ok().unwrap();
+        let res = self.tcp.read(&mut buffer);
+        if res.is_err() {            
+            return  Ok(None);
+        }
+        let n = res.ok().unwrap();
         if n == 0 {
             return Err("Connection shut down!");    
         }
@@ -198,7 +210,7 @@ impl<S: Read + Write> WSStream<S> {
                 return Err(r.unwrap_err());
             }
         }
-        Ok(frame)
+        Ok(Some(frame))
     }
 
     pub fn get_stream(&self) -> &S {
