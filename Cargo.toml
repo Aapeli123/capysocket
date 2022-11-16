@@ -1,0 +1,15 @@
+[package]
+name = "capysocket"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "capysocket"           # The name of the target.
+path = "src/lib.rs"    # The source file of the target.
+
+[dependencies]
+httparse = "1.8.0"
+sha-1 = "0.10.0"
+base64 = "0.13.1"
+log = "0.4.17"
