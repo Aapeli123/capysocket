@@ -37,7 +37,10 @@ impl<S: Read + Write> WSStream<S> {
     pub fn from(mut stream: S) -> Result<WSStream<S>, String> {
         // Upgrades the connection in stream to websocket if it has sufficient headers.
         let mut data: [u8; 1024] = [0; 1024];
-        stream.read(&mut data).unwrap();
+        let mut r = stream.read(&mut data);
+        while r.is_err() {
+            r = stream.read(&mut data);
+        }
         let mut headers = [httparse::EMPTY_HEADER; 1024];
         {
             let mut req = Request::new(&mut headers);
